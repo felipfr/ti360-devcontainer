@@ -1,0 +1,28 @@
+version: '3.9'
+name: ti360-devcontainer
+services:
+
+  # Cria um banco de dados PostgreSQL
+  db:
+    container_name: ti360-db
+    image: bitnami/postgresql:latest
+    restart: unless-stopped # Reinicia o contêiner automaticamente, a menos que seja interrompido
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ti360db
+
+  # Cria o contêiner do Node.js usando o Dockerfile
+  nodejs:
+    container_name: ti360-nodejs
+    network_mode: service:db # Usa a mesma rede do contêiner do banco de dados
+    build:
+      # Executa o build com base no diretório raiz
+      context: ..
+      # Arquivo Dockerfile
+      dockerfile: .docker/Dockerfile
+    depends_on:
+    # Só inicia o contêiner do Node.js depois que o contêiner do PostgreSQL estiver pronto
+      - db
+    command: sh -c "if [ ! -f /var/app-initialized ]; then touch /var/app-initialized && npm install && npm run migrate:dev && npx prisma db seed; fi && sleep infinity"
+    # Instala as dependências, executa as migrações, semeia o banco de dados e mantém o contêiner em execução
